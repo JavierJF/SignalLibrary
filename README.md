@@ -8,8 +8,8 @@ SignalLibrary
 
  2. Priorities:
      * List of priorities that will be followed in the development of this
-     * library. We hope this will give users early knowledge of when they will
-     * have access to some key features they might be interested in.
+       library. We hope this will give users early knowledge of when they will
+       have access to some key features they might be interested in.
 
  3. Acknowledgments:
      * Thanks to severals communities.
