@@ -1,17 +1,18 @@
 SignalLibrary
 =============
 
-##INDEX
+##Index
 
  1. Summary:
-      Resume the content of this Library and his purpose.
+     * Resume the content of this Library and his purpose.
 
  2. Priorities:
-      List of priorities that will be followed in the development of this
-      library. We hope this will give users early knowledge of when they will
-      have access to some key features they might be interested in.
+     * List of priorities that will be followed in the development of this
+     * library. We hope this will give users early knowledge of when they will
+     * have access to some key features they might be interested in.
 
  3. Acknowledgments:
+     * Thanks to severals communities.
 
  4. Special Thanks:
 
@@ -47,9 +48,9 @@ This document will be updated with the development of the project.
 
 ##Acknowledgments
 
-Thanks to all the Open Source/Free Software communities. For they effort and
+Thanks to all the Open Source/Free Software communities, for they effort and
 constance. Thanks to them it's possible to have access to the huge amount of
-information that this project requires. And thanks to the C++ community also,
+information that this project requires. Also thanks to the C++ community,
 for their desire to share their knowledge.
 
 With the development of the project the special thanks section will be updated.
