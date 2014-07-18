@@ -4,4 +4,5 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 INCLUDE(cmake/CompilerFlags.cmake REQUIRED)
 INCLUDE(cmake/FindLibraries.cmake REQUIRED)
 
+ADD_SUBDIRECTORY(include)
 ADD_SUBDIRECTORY(tests)
