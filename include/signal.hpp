@@ -1,5 +1,5 @@
-#ifndef ANYSIGNAL_H
-#define ANYSIGNAL_H
+#ifndef SIGNAL_H
+#define SIGNAL_H
 
 #include <functional>
 
