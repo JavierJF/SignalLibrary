@@ -1,3 +1,12 @@
+/**
+ * @file signal.hpp
+ * File representing "signal" class.
+ *
+ * @author Javier Jaramago Fernández
+ *
+ * @version 0.1
+ */
+
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
