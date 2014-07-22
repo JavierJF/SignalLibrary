@@ -15,6 +15,11 @@
 template<class T>
 using decayedtype = typename std::decay<T>::type;
 
+/*!
+ * The purpose of this class is to act like a generic container that
+ * makes possible to store any kind of function. This is achieve through
+ * the same techniques of Boost::Any.
+ */
 class signal
 {
 private:
