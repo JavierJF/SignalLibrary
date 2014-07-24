@@ -26,14 +26,14 @@ using decayedtype = typename std::decay<T>::type;
  */
 class signal
 {
-    private:
+private:
 
     /*!
      * Base class for type-erasure mechanism.
      */
     class placeholder
     {
-        public:
+    public:
         virtual ~placeholder() {}
 
         virtual placeholder* clone() const = 0;
@@ -47,12 +47,14 @@ class signal
     template<typename T>
     class derived : public placeholder
     {
-        public:
+    public:
         template<typename U> derived(U&& value) : _value(std::forward<U>(value)) { }
 
         T _value;
 
-        placeholder* clone() const { return new derived<T>(_value); }
+        placeholder* clone() const {
+            return new derived<T>(_value);
+        }
     };
 
     /*!
@@ -74,7 +76,7 @@ class signal
      */
     placeholder* _ptr;
 
-    public:
+public:
 
     /*!
      * Constructs a new \c signal.
@@ -161,14 +163,18 @@ class signal
      *
      * @return If \c signal::_ptr is null returns \c TRUE, \c FALSE otherwise.
      */
-    bool is_null() const { return !_ptr; }
+    bool is_null() const {
+        return !_ptr;
+    }
 
     /*!
      * Checks if internal placeholder \c signal::_ptr pointer isn't null.
      *
      * @return If \c signal::_ptr isn't null returns \c TRUE, \c FALSE otherwise.
      */
-    bool not_null() const { return _ptr; }
+    bool not_null() const {
+        return _ptr;
+    }
 
     /*!
      * @brief Checks if the held placeholder \c signal::_ptr is of the same type
