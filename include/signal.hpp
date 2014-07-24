@@ -26,7 +26,7 @@ using decayedtype = typename std::decay<T>::type;
  */
 class signal
 {
-private:
+    private:
 
     /*!
      * Base class for type-erasure mechanism.
@@ -77,6 +77,86 @@ private:
     public:
 
     /*!
+     * Constructs a new \c signal.
+     *
+     * @param value Function that will be stored in the \c signal.
+     *
+     * @tparam U Type of the \c std::function that is going to be stored.
+     */
+    template<typename U> signal(std::function<U> value)
+        : _ptr(new derived<decayedtype<std::function<U>>>(std::forward<std::function<U>>(value)))
+    {
+    }
+
+    /*!
+     * @brief Constructs an empty \c signal.
+     */
+    signal()
+        : _ptr(nullptr)
+    {
+    }
+
+    /*!
+     * @brief Non-Constant copy constructor a \c signal from a reference.
+     *
+     * @param sig Reference whose pointed type is going to be copied.
+     *
+     * @todo This method is a copy constructor with a non-constant argument.
+     *       The necessity of this should be evaluated. It's unusual and probably
+     *       meaningless.
+     */
+    signal(signal& sig)
+        : _ptr(sig.clone())
+    {
+    }
+
+    /*!
+     * @brief Move constructor.
+     *
+     * @param sig Rvalue reference from which the \c signal::_ptr will be taken.
+     */
+    signal(signal&& sig)
+        : _ptr(sig._ptr)
+    {
+        sig._ptr = nullptr;
+    }
+
+    /*!
+     * @brief Copy constructor.
+     *
+     * @param sig Reference whose pointed type is going to be copied.
+     */
+    signal(const signal& sig)
+        : _ptr(sig.clone())
+    {
+    }
+
+    /*!
+     * @brief Move constructor.
+     *
+     * @param sig Rvalue reference whose pointed type is going to be copied.
+     *
+     * @todo This method takes a \c const rvalue reference, that make impossible to
+     *       stole its resources, which is the main purpose of the move constructors.
+     *       It will be necessary to evaluate the real advantages of having this function.
+     */
+    signal(const signal&& sig)
+        : _ptr(sig.clone())
+    {
+    }
+
+    /*!
+     * @brief Destructor.
+     *
+     * @note Simply destroys the internal signal::_ptr.
+     */
+    ~signal()
+    {
+        if (_ptr)
+            delete _ptr;
+    }
+
+    /*!
      * Checks if internal placeholder \c signal::_ptr pointer is \c null.
      *
      * @return If \c signal::_ptr is null returns \c TRUE, \c FALSE otherwise.
@@ -91,19 +171,6 @@ private:
     bool not_null() const { return _ptr; }
 
     /*!
-     * Constructs a new \c signal.
-     *
-     * @param value Function that will be stored in the \c signal.
-     *
-     * @tparam U Type of the \c std::function that is going to be stored.
-     */
-    template<typename U> signal(std::function<U> value)
-        : _ptr(new derived<decayedtype<std::function<U>>>(std::forward<std::function<U>>(value)))
-    {
-
-    }
-
-    /*!
      * @brief Checks if the held placeholder \c signal::_ptr is of the same type
      *        than a given one at runtime.
      *
@@ -115,6 +182,7 @@ private:
      *
      * @retval FALSE Otherwise.
      */
+
     template<class U> bool is() const
     {
         typedef decayedtype<U> T;
@@ -148,7 +216,6 @@ private:
         return _derived->_value;
     }
 
-
     /*!
      * @brief Executes the function that holds \c signal::_ptr, represent the
      *        functional core of the class.
@@ -168,6 +235,7 @@ private:
      *
      *             - Then passed type isn't a std::function.
      */
+
     template <typename... args>
     void emit(args... A)
     {
@@ -189,68 +257,6 @@ private:
     {
         return as<decayedtype<U>>();
     }
-
-    /*!
-     * @brief Constructs an empty \c signal.
-     */
-    signal()
-        : _ptr(nullptr)
-    {
-
-    }
-
-    /*!
-     * @brief Non-Constant copy constructor a \c signal from a reference.
-     *
-     * @param sig Reference whose pointed type is going to be copied.
-     *
-     * @todo This method is a copy constructor with a non-constant argument.
-     *       The necessity of this should be evaluated. It's unusual and probably
-     *       meaningless.
-     */
-    signal(signal& sig)
-        : _ptr(sig.clone())
-    {
-
-    }
-
-    /*!
-     * @brief Move constructor.
-     *
-     * @param sig Rvalue reference from which the \c signal::_ptr will be taken.
-     */
-    signal(signal&& sig)
-        : _ptr(sig._ptr)
-    {
-        sig._ptr = nullptr;
-    }
-
-    /*!
-     * @brief Copy constructor.
-     *
-     * @param sig Reference whose pointed type is going to be copied.
-     */
-    signal(const signal& sig)
-        : _ptr(sig.clone())
-    {
-
-    }
-
-    /*!
-     * @brief Move constructor.
-     *
-     * @param sig Rvalue reference whose pointed type is going to be copied.
-     *
-     * @todo This method takes a \c const rvalue reference, that make impossible to
-     *       stole its resources, which is the main purpose of the move constructors.
-     *       It will be necessary to evaluate the real advantages of having this function.
-     */
-    signal(const signal&& sig)
-        : _ptr(sig.clone())
-    {
-
-    }
-
     /*!
      * @brief Assignment operator.
      *
@@ -284,17 +290,6 @@ private:
         std::swap(_ptr, sig._ptr);
 
         return *this;
-    }
-
-    /*!
-     * @brief Destructor.
-     *
-     * @note Simply destroys the internal signal::_ptr.
-     */
-    ~signal()
-    {
-        if (_ptr)
-            delete _ptr;
     }
 };
 
