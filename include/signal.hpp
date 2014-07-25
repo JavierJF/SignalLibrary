@@ -298,4 +298,4 @@ public:
     }
 };
 
-#endif
+#endif // SIGNAL_H
