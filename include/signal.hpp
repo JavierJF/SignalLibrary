@@ -188,7 +188,6 @@ public:
      *
      * @retval FALSE Otherwise.
      */
-
     template<class U> bool is() const
     {
         typedef decayedtype<U> T;
@@ -241,7 +240,6 @@ public:
      *
      *             - Then passed type isn't a std::function.
      */
-
     template <typename... args>
     void emit(args... A)
     {
@@ -263,6 +261,7 @@ public:
     {
         return as<decayedtype<U>>();
     }
+
     /*!
      * @brief Assignment operator.
      *
@@ -299,4 +298,4 @@ public:
     }
 };
 
-#endif
+#endif // SIGNAL_H
