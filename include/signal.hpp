@@ -1,18 +1,23 @@
 /**
- * @file signal.hpp File representing \c signal class.
+ * @file Signal.hpp File representing \c Signal class.
  *
  * @author Javier Jaramago Fernández
  *
  * @version 0.1
  */
 
-#ifndef SIGNAL_H
-#define SIGNAL_H
+#ifndef SSIGNAL_HPP
+#define SSIGNAL_HPP
 
-#include <functional>
+#include <assert.h>
+#include <memory>
+#include <cxxabi.h>
+#include <iostream>
 
-template<class T>
-using decayedtype = typename std::decay<T>::type;
+template<class T> using decayedType = typename std::decay<T>::type;
+
+namespace sep
+{
 
 /*!
  * The purpose of this class is to act like a generic container that
@@ -24,9 +29,110 @@ using decayedtype = typename std::decay<T>::type;
  *       This could generate a significant performance impact due right now the
  *       compiler is going to be force to make indirect calls.
  */
-class signal
+class Signal
 {
 private:
+    template<typename T>
+    struct is_pointer
+    {
+        static const bool value = false;
+    };
+
+    template<typename T>
+    struct is_pointer<T*>
+    {
+        static const bool value = true;
+    };
+
+    template<unsigned... Is>
+    struct indices
+    {
+    };
+
+    template<unsigned M, unsigned... Is>
+    struct indices_gen : indices_gen<M - 1, M - 1, Is...>
+    {
+    };
+
+    template<unsigned... Is>
+    struct indices_gen<0, Is...> : indices<Is...>
+    {
+    };
+
+    template <typename F, size_t num_args, typename... arguments>
+    struct unpack_caller
+    {
+    using indicesFor = indices_gen<num_args>;
+    private:
+        template <typename Type, typename FuncType, unsigned... I>
+        constexpr inline void call(Type T,
+                                   const FuncType &f,
+                                   const std::tuple<arguments...> &args,
+                                   indices<I...>) const
+        {
+            call_fun(T, f, args, indices<I...>());
+        }
+
+        template <typename Type, typename FuncType, unsigned... I>
+        constexpr inline void call_fun(Type* const T,
+                                       const FuncType &f,
+                                       const std::tuple<arguments...> &args,
+                                       indices<I...>) const
+        {
+            (T->*f)(std::get<I>(args)...);
+        }
+
+        template <typename Type, typename FuncType, unsigned... I>
+        constexpr inline void call_fun(Type T,
+                                       const FuncType &f,
+                                       const std::tuple<arguments...> &args,
+                                       indices<I...>) const
+        {
+            (T.*f)(std::get<I>(args)...);
+        }
+
+        template <typename FuncType, unsigned... I>
+        constexpr inline void call(const FuncType &f,
+                                   const std::tuple<arguments...> &args,
+                                   indices<I...>) const
+        {
+            call_fun(f, args, indices<I...>());
+        }
+
+        template <typename FuncType, unsigned... I>
+        constexpr inline void call_fun(const FuncType &f,
+                                       const std::tuple<arguments...> &args,
+                                       indices<I...>) const
+        {
+            (*f)(std::get<I>(args)...);
+        }
+
+        template <typename Type, typename FuncType, unsigned... I>
+        constexpr inline void call_fun(const FuncType &f,
+                                       const std::tuple<arguments...> &args,
+                                       indices<I...>) const
+        {
+            (*f)(std::get<I>(args)...);
+        }
+
+    public:
+        template <typename Type, typename FuncType>
+        constexpr inline void operator() (Type T,
+                                          const FuncType &f,
+                                          const std::tuple<arguments...> &args) const
+        {
+            static_assert(sizeof...(arguments) == num_args, "Equal number of arguments");
+            call(T, f, args, indicesFor {});
+        }
+
+        template <typename FuncType>
+        constexpr inline void operator () (const FuncType &f,
+                                           const std::tuple<arguments...> &args) const
+        {
+            static_assert(sizeof...(arguments) == num_args,"Equal number of arguments");
+            call(f, args, indicesFor {});
+        }
+    };
 
     /*!
      * Base class for type-erasure mechanism.
@@ -36,34 +142,75 @@ private:
     public:
         virtual ~placeholder() {}
 
-        virtual placeholder* clone() const = 0;
+        virtual const placeholder* clone() const = 0;
+
+        virtual void execute() const = 0;
     };
 
-    /*!
-     * Class that can hold any type.
-     *
-     * @tparam T Type of the object that is going to be stored.
-     */
-    template<typename T>
-    class derived : public placeholder
-    {
+    template <typename T, typename F, typename... arguments>
+    class derived final : public placeholder {
+    private:
+        T* const type;
+        const F funct;
+
+        const std::tuple<arguments...> argum;
+        const unpack_caller<F, sizeof...(arguments), arguments...> up;
+
     public:
-        template<typename U> derived(U&& value) : _value(std::forward<U>(value)) { }
+        derived(T* const type, const F funct, const arguments... args) :
+            type(type), funct(funct), argum(std::make_tuple(args...)),
+            up(unpack_caller<F, sizeof...(arguments), arguments...>())
+        {
+        }
 
-        T _value;
+        derived(T* const type, const F funct,
+                const std::tuple<arguments...> argum) : type(type),
+                                                        funct(funct),
+                                                        argum(argum),
+                                                        up(unpack_caller<F, sizeof...(arguments), arguments...>())
+        {
+        }
 
-        placeholder* clone() const {
-            return new derived<T>(_value);
+        derived(derived<T,F,arguments...>&& other) : funct(other.funct),
+                                                     type(other.type),
+                                                     argum(std::move(other.argum)),
+                                                     up(std::move(other.up))
+        {
+            other.type = NULL;
+        }
+
+        inline void execute() const override final
+        {
+            up(this->type, this->funct, this->argum);
+        }
+
+        const placeholder* clone() const final
+        {
+            return new derived<decayedType<T>, decayedType<F>,
+                decayedType<arguments>...>(this->type, this->funct, this->argum);
+        }
+
+        placeholder& operator=(derived<T,F,arguments...> other)
+        {
+            if(this!=other)
+            {
+                this->funct = other.funct;
+                this->type = other.type;
+                this->argum = other.argum;
+                this->up = other.up;
+                other->type = NULL;
+            }
+            return *this;
         }
     };
 
     /*!
-     * Clone the internal type that the \c signal holds.
+     * Clone the internal type that the \c Signal holds.
      *
-     * @return If exists, returns the internal \c placeholder pointer \c signal::_ptr,
+     * @return If exists, returns the internal \c placeholder pointer \c Signal::_ptr,
      *         otherwise returns a "null pointer".
      */
-    placeholder* clone() const
+    const placeholder* clone() const
     {
         if (_ptr)
             return _ptr->clone();
@@ -74,53 +221,43 @@ private:
     /*!
      * @brief Internal pointer used for type-erasure.
      */
-    placeholder* _ptr;
+    const placeholder* _ptr;
 
 public:
-
     /*!
-     * Constructs a new \c signal.
+     * Constructs a new \c Signal.
      *
-     * @param value Function that will be stored in the \c signal.
+     * @param value Function that will be stored in the \c Signal.
      *
      * @tparam U Type of the \c std::function that is going to be stored.
      */
-    template<typename U> signal(std::function<U> value)
-        : _ptr(new derived<decayedtype<std::function<U>>>(std::forward<std::function<U>>(value)))
+    template <typename Type, typename F, typename... args>
+    Signal(Type* const type,
+            F&& func,
+            args&&... arguments) : _ptr(new derived<decayedType<Type>,
+                                        decayedType<F>,
+                                        decayedType<args>...>(std::forward<Type* const>(type),
+                                        std::forward<F>(func),
+                                        std::forward<args>(arguments)...))
     {
     }
 
     /*!
-     * @brief Constructs an empty \c signal.
+     * @brief Constructs an empty \c Signal.
      */
-    signal()
-        : _ptr(nullptr)
-    {
-    }
-
-    /*!
-     * @brief Non-Constant copy constructor a \c signal from a reference.
-     *
-     * @param sig Reference whose pointed type is going to be copied.
-     *
-     * @todo This method is a copy constructor with a non-constant argument.
-     *       The necessity of this should be evaluated. It's unusual and probably
-     *       meaningless.
-     */
-    signal(signal& sig)
-        : _ptr(sig.clone())
+    Signal()
+        : _ptr()
     {
     }
 
     /*!
      * @brief Move constructor.
      *
-     * @param sig Rvalue reference from which the \c signal::_ptr will be taken.
+     * @param sig Rvalue reference from which the \c Signal::_ptr will be taken.
      */
-    signal(signal&& sig)
+    Signal(Signal&& sig)
         : _ptr(sig._ptr)
     {
-        sig._ptr = nullptr;
     }
 
     /*!
@@ -128,7 +265,7 @@ public:
      *
      * @param sig Reference whose pointed type is going to be copied.
      */
-    signal(const signal& sig)
+    Signal(const Signal& sig)
         : _ptr(sig.clone())
     {
     }
@@ -142,7 +279,7 @@ public:
      *       stole its resources, which is the main purpose of the move constructors.
      *       It will be necessary to evaluate the real advantages of having this function.
      */
-    signal(const signal&& sig)
+    Signal(const Signal&& sig)
         : _ptr(sig.clone())
     {
     }
@@ -150,88 +287,56 @@ public:
     /*!
      * @brief Destructor.
      *
-     * @note Simply destroys the internal signal::_ptr.
+     * @note Simply destroys the internal Signal::_ptr.
      */
-    ~signal()
+    ~Signal()
     {
         if (_ptr)
             delete _ptr;
     }
 
     /*!
-     * Checks if internal placeholder \c signal::_ptr pointer is \c null.
+     * Checks if internal placeholder \c Signal::_ptr pointer is \c null.
      *
-     * @return If \c signal::_ptr is null returns \c TRUE, \c FALSE otherwise.
+     * @return If \c Signal::_ptr is null returns \c TRUE, \c FALSE otherwise.
      */
-    bool is_null() const {
+    bool is_null() const
+    {
         return !_ptr;
     }
 
     /*!
-     * Checks if internal placeholder \c signal::_ptr pointer isn't null.
+     * Checks if internal placeholder \c Signal::_ptr pointer isn't null.
      *
-     * @return If \c signal::_ptr isn't null returns \c TRUE, \c FALSE otherwise.
+     * @return If \c Signal::_ptr isn't null returns \c TRUE, \c FALSE otherwise.
      */
-    bool not_null() const {
+    bool not_null() const
+    {
         return _ptr;
     }
 
-    /*!
-     * @brief Checks if the held placeholder \c signal::_ptr is of the same type
-     *        than a given one at runtime.
-     *
-     * @tparam U Type with which the comparison is going to be make.
-     *
-     * @throws std::bad_cast In case that the given type can't be cast to the held one.
-     *
-     * @retval TRUE If the given type match the contained one.
-     *
-     * @retval FALSE Otherwise.
-     */
-    template<class U> bool is() const
+    std::shared_ptr<char> demangle(const char* name)
     {
-        typedef decayedtype<U> T;
-
-        auto deriv = dynamic_cast<derived<T>*> (_ptr);
-
-        return deriv;
+        int status;
+        auto ptr = abi::__cxa_demangle(name, 0, 0, &status);
+        if (ptr != NULL) {
+            return std::shared_ptr<char>(ptr, std::free);
+        }
+        std::cerr << "couldn't demangle: " << status << std::endl;
+        return std::shared_ptr<char>();
     }
 
     /*!
-     * @brief Cast the held placeholder \c signal::_ptr to a given type at
-     *        runtime.
-     *
-     * @tparam U Type in which the \c signal::_ptr is going to be casted.
-     *
-     * @throws std::bad_cast In case that the given type can't be cast to the
-     *                       held one.
-     *
-     * @returns The \c signal::_ptr casted to the specified type.
-     */
-    template<class U>
-    decayedtype<U>& as()
-    {
-        typedef decayedtype<U> T;
-
-        auto _derived = dynamic_cast<derived<T>*> (_ptr);
-
-        if (!_derived)
-            throw std::bad_cast();
-
-        return _derived->_value;
-    }
-
-    /*!
-     * @brief Executes the function that holds \c signal::_ptr, represent the
+     * @brief Executes the function that holds \c Signal::_ptr, represent the
      *        functional core of the class.
      *
      * @tparam args The types of the parameters that will be the function
      *              arguments.
      *
-     * @param A The function parameters that will be passed to the \c signal::_ptr
+     * @param A The function parameters that will be passed to the \c Signal::_ptr
      *          pointer.
      *
-     * @throws std::bad_cast In case the current \c signal::_ptr can't be casted to the desired function type.
+     * @throws std::bad_cast In case the current \c Signal::_ptr can't be casted to the desired function type.
      *         @details
      *         This could mean several things:
      *
@@ -240,26 +345,9 @@ public:
      *
      *             - Then passed type isn't a std::function.
      */
-    template <typename... args>
-    void emit(args... A)
+    inline void launch() const
     {
-        auto _derived = dynamic_cast<derived<std::function<void(decltype(A)...)>>*> (_ptr);
-
-        if (!_derived)
-            throw std::bad_cast();
-
-        _derived->_value(A...);
-    }
-
-    /*!
-     * @brief Conversion operator.
-     *
-     * @throws std::bad_cast In case the conversion can't be performed.
-     */
-    template<class U>
-    operator U()
-    {
-        return as<decayedtype<U>>();
+        this->_ptr->execute();
     }
 
     /*!
@@ -267,7 +355,7 @@ public:
      *
      * @param sig \c Signal that is going to be assigned.
      */
-    signal& operator=(const signal& sig)
+    Signal& operator=(const Signal& sig)
     {
         if (_ptr == sig._ptr)
             return *this;
@@ -285,9 +373,9 @@ public:
     /*!
      * @brief Move assignment operator.
      *
-     * @param sig Rvalue reference \c signal whose resources are going to be stoled.
+     * @param sig Rvalue reference \c Signal whose resources are going to be stoled.
      */
-    signal& operator=(signal&& sig)
+    Signal& operator=(Signal&& sig)
     {
         if (_ptr == sig._ptr)
             return *this;
@@ -297,5 +385,7 @@ public:
         return *this;
     }
 };
+
+}
 
 #endif // SIGNAL_H
