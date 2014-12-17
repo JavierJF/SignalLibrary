@@ -1,5 +1,5 @@
-#include <emitter.hpp>
-#include <delegate.hpp>
+#include <Emitter.hpp>
+#include <Delegate.hpp>
 #include <stdlib.h>
 
 Emitter::Emitter()

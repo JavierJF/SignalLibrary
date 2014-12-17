@@ -1,8 +1,8 @@
 #ifndef EMITTER_HPP
 #define EMITTER_HPP
 
-#include <signal.hpp>
-#include <signal_exceptions.hpp>
+#include <Signal.hpp>
+#include <SignalExceptions.hpp>
 #include <list>
 
 #define _SIGNALS_(...)                                             			\

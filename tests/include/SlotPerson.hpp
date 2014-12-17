@@ -1,7 +1,7 @@
 #ifndef SLOTPERSON_HPP
 #define SLOTPERSON_HPP
 
-#include <delegate.hpp>
+#include <Delegate.hpp>
 #include <string>
 
 class SlotPerson : public Delegate

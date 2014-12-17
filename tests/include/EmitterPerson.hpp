@@ -1,7 +1,7 @@
 #ifndef EMITTERPERSON_HPP
 #define EMITTERPERSON_HPP
 
-#include <emitter.hpp>
+#include <Emitter.hpp>
 
 class EmitterPerson : public Emitter {
 public:

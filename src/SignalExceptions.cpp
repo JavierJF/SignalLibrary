@@ -1,4 +1,4 @@
-#include "signal_exceptions.hpp"
+#include "SignalExceptions.hpp"
 
 no_such_signal::no_such_signal(const std::string& message) : _message(message) {
 }
