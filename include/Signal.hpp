@@ -19,6 +19,181 @@ template<class T> using decayedType = typename std::decay<T>::type;
 namespace sep
 {
 
+/**
+ * Helper types for parameter unpack.
+ */
+template<typename T>
+struct is_pointer
+{
+    static const bool value = false;
+};
+
+template<typename T>
+struct is_pointer<T*>
+{
+    static const bool value = true;
+};
+
+template<unsigned... Is>
+struct indices
+{
+};
+
+template<unsigned M, unsigned... Is>
+struct indices_gen : indices_gen<M - 1, M - 1, Is...>
+{
+};
+
+template<unsigned... Is>
+struct indices_gen<0, Is...> : indices<Is...>
+{
+};
+
+template <typename F, size_t num_args, typename... arguments>
+struct unpack_caller
+{
+using indicesFor = indices_gen<num_args>;
+private:
+    template <typename Type, typename FuncType, unsigned... I>
+    constexpr inline void call(Type T,
+                               const FuncType &f,
+                               const std::tuple<arguments...> &args,
+                               indices<I...>) const
+    {
+        call_fun(T, f, args, indices<I...>());
+    }
+
+    template <typename Type, typename FuncType, unsigned... I>
+    constexpr inline void call_fun(Type* const T,
+                                   const FuncType &f,
+                                   const std::tuple<arguments...> &args,
+                                   indices<I...>) const
+    {
+        (T->*f)(std::get<I>(args)...);
+    }
+
+    template <typename Type, typename FuncType, unsigned... I>
+    constexpr inline void call_fun(Type T,
+                                   const FuncType &f,
+                                   const std::tuple<arguments...> &args,
+                                   indices<I...>) const
+    {
+        (T.*f)(std::get<I>(args)...);
+    }
+
+    template <typename FuncType, unsigned... I>
+    constexpr inline void call(const FuncType &f,
+                               const std::tuple<arguments...> &args,
+                               indices<I...>) const
+    {
+        call_fun(f, args, indices<I...>());
+    }
+
+    template <typename FuncType, unsigned... I>
+    constexpr inline void call_fun(const FuncType &f,
+                                   const std::tuple<arguments...> &args,
+                                   indices<I...>) const
+    {
+        (*f)(std::get<I>(args)...);
+    }
+
+    template <typename Type, typename FuncType, unsigned... I>
+    constexpr inline void call_fun(const FuncType &f,
+                                   const std::tuple<arguments...> &args,
+                                   indices<I...>) const
+    {
+        (*f)(std::get<I>(args)...);
+    }
+
+public:
+    template <typename Type, typename FuncType>
+    constexpr inline void operator() (Type T,
+                                      const FuncType &f,
+                                      const std::tuple<arguments...> &args) const
+    {
+        static_assert(sizeof...(arguments) == num_args, "Equal number of arguments");
+        call(T, f, args, indicesFor {});
+    }
+
+    template <typename FuncType>
+    constexpr inline void operator () (const FuncType &f,
+                                       const std::tuple<arguments...> &args) const
+    {
+        static_assert(sizeof...(arguments) == num_args,"Equal number of arguments");
+        call(f, args, indicesFor {});
+    }
+};
+
+/*!
+ * Base class for type-erasure mechanism.
+ */
+class placeholder
+{
+public:
+    virtual ~placeholder() {}
+
+    virtual const placeholder* clone() const = 0;
+
+    virtual void execute() const = 0;
+};
+
+template <typename T, typename F, typename... arguments>
+class derived final : public placeholder {
+private:
+    T* const type;
+    const F funct;
+
+    const std::tuple<arguments...> argum;
+    const unpack_caller<F, sizeof...(arguments), arguments...> up;
+
+public:
+    derived(T* const type, const F funct, const arguments... args) :
+        type(type), funct(funct), argum(std::make_tuple(args...)),
+        up(unpack_caller<F, sizeof...(arguments), arguments...>())
+    {
+    }
+
+    derived(T* const type, const F funct,
+            const std::tuple<arguments...> argum) : type(type),
+                                                    funct(funct),
+                                                    argum(argum),
+                                                    up(unpack_caller<F, sizeof...(arguments), arguments...>())
+    {
+    }
+
+    derived(derived<T,F,arguments...>&& other) : funct(other.funct),
+                                                 type(other.type),
+                                                 argum(std::move(other.argum)),
+                                                 up(std::move(other.up))
+    {
+        other.type = NULL;
+    }
+
+    inline void execute() const override final
+    {
+        up(this->type, this->funct, this->argum);
+    }
+
+    const placeholder* clone() const final
+    {
+        return new derived<decayedType<T>, decayedType<F>,
+            decayedType<arguments>...>(this->type, this->funct, this->argum);
+    }
+
+    placeholder& operator=(derived<T,F,arguments...> other)
+    {
+        if(this!=other)
+        {
+            this->funct = other.funct;
+            this->type = other.type;
+            this->argum = other.argum;
+            this->up = other.up;
+            other->type = NULL;
+        }
+        return *this;
+    }
+};
+
 /*!
  * The purpose of this class is to act like a generic container that
  * makes possible to store any kind of function. This is achieve through
@@ -32,177 +207,10 @@ namespace sep
 class Signal
 {
 private:
-    template<typename T>
-    struct is_pointer
-    {
-        static const bool value = false;
-    };
-
-    template<typename T>
-    struct is_pointer<T*>
-    {
-        static const bool value = true;
-    };
-
-    template<unsigned... Is>
-    struct indices
-    {
-    };
-
-    template<unsigned M, unsigned... Is>
-    struct indices_gen : indices_gen<M - 1, M - 1, Is...>
-    {
-    };
-
-    template<unsigned... Is>
-    struct indices_gen<0, Is...> : indices<Is...>
-    {
-    };
-
-    template <typename F, size_t num_args, typename... arguments>
-    struct unpack_caller
-    {
-    using indicesFor = indices_gen<num_args>;
-    private:
-        template <typename Type, typename FuncType, unsigned... I>
-        constexpr inline void call(Type T,
-                                   const FuncType &f,
-                                   const std::tuple<arguments...> &args,
-                                   indices<I...>) const
-        {
-            call_fun(T, f, args, indices<I...>());
-        }
-
-        template <typename Type, typename FuncType, unsigned... I>
-        constexpr inline void call_fun(Type* const T,
-                                       const FuncType &f,
-                                       const std::tuple<arguments...> &args,
-                                       indices<I...>) const
-        {
-            (T->*f)(std::get<I>(args)...);
-        }
-
-        template <typename Type, typename FuncType, unsigned... I>
-        constexpr inline void call_fun(Type T,
-                                       const FuncType &f,
-                                       const std::tuple<arguments...> &args,
-                                       indices<I...>) const
-        {
-            (T.*f)(std::get<I>(args)...);
-        }
-
-        template <typename FuncType, unsigned... I>
-        constexpr inline void call(const FuncType &f,
-                                   const std::tuple<arguments...> &args,
-                                   indices<I...>) const
-        {
-            call_fun(f, args, indices<I...>());
-        }
-
-        template <typename FuncType, unsigned... I>
-        constexpr inline void call_fun(const FuncType &f,
-                                       const std::tuple<arguments...> &args,
-                                       indices<I...>) const
-        {
-            (*f)(std::get<I>(args)...);
-        }
-
-        template <typename Type, typename FuncType, unsigned... I>
-        constexpr inline void call_fun(const FuncType &f,
-                                       const std::tuple<arguments...> &args,
-                                       indices<I...>) const
-        {
-            (*f)(std::get<I>(args)...);
-        }
-
-    public:
-        template <typename Type, typename FuncType>
-        constexpr inline void operator() (Type T,
-                                          const FuncType &f,
-                                          const std::tuple<arguments...> &args) const
-        {
-            static_assert(sizeof...(arguments) == num_args, "Equal number of arguments");
-            call(T, f, args, indicesFor {});
-        }
-
-        template <typename FuncType>
-        constexpr inline void operator () (const FuncType &f,
-                                           const std::tuple<arguments...> &args) const
-        {
-            static_assert(sizeof...(arguments) == num_args,"Equal number of arguments");
-            call(f, args, indicesFor {});
-        }
-    };
-
     /*!
-     * Base class for type-erasure mechanism.
+     * @brief Internal pointer used for type-erasure.
      */
-    class placeholder
-    {
-    public:
-        virtual ~placeholder() {}
-
-        virtual const placeholder* clone() const = 0;
-
-        virtual void execute() const = 0;
-    };
-
-    template <typename T, typename F, typename... arguments>
-    class derived final : public placeholder {
-    private:
-        T* const type;
-        const F funct;
-
-        const std::tuple<arguments...> argum;
-        const unpack_caller<F, sizeof...(arguments), arguments...> up;
-
-    public:
-        derived(T* const type, const F funct, const arguments... args) :
-            type(type), funct(funct), argum(std::make_tuple(args...)),
-            up(unpack_caller<F, sizeof...(arguments), arguments...>())
-        {
-        }
-
-        derived(T* const type, const F funct,
-                const std::tuple<arguments...> argum) : type(type),
-                                                        funct(funct),
-                                                        argum(argum),
-                                                        up(unpack_caller<F, sizeof...(arguments), arguments...>())
-        {
-        }
-
-        derived(derived<T,F,arguments...>&& other) : funct(other.funct),
-                                                     type(other.type),
-                                                     argum(std::move(other.argum)),
-                                                     up(std::move(other.up))
-        {
-            other.type = NULL;
-        }
-
-        inline void execute() const override final
-        {
-            up(this->type, this->funct, this->argum);
-        }
-
-        const placeholder* clone() const final
-        {
-            return new derived<decayedType<T>, decayedType<F>,
-                decayedType<arguments>...>(this->type, this->funct, this->argum);
-        }
-
-        placeholder& operator=(derived<T,F,arguments...> other)
-        {
-            if(this!=other)
-            {
-                this->funct = other.funct;
-                this->type = other.type;
-                this->argum = other.argum;
-                this->up = other.up;
-                other->type = NULL;
-            }
-            return *this;
-        }
-    };
+    const placeholder* _ptr;
 
     /*!
      * Clone the internal type that the \c Signal holds.
@@ -217,11 +225,6 @@ private:
         else
             return nullptr;
     }
-
-    /*!
-     * @brief Internal pointer used for type-erasure.
-     */
-    const placeholder* _ptr;
 
 public:
     /*!
