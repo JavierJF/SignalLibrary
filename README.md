@@ -18,8 +18,8 @@ SignalLibrary
 
 ##Summary
 
-A C++11 based signal/slot library. First part of a future Functional/Reactive
-C++ Framework. The main goal is to offer a pure Standard based signal/slot library,
+A C++14 signal/slot library. Part of a Functional/Reactive C++ Framework.
+The main goal is to offer a pure Standard based signal/slot library,
 that cover all the fundamental necessities of this concept.
 
 Also we want to offer some key features that are not so easy to found implemented
