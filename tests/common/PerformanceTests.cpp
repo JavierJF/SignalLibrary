@@ -78,7 +78,7 @@ TEST(TestSignalAssembly, shouldCreateSignal)
     //==========================
 
     //    std::function<void(std::string*)> f = std::bind(&SlotPerson::compare, person, std::placeholders::_1);
-    //    sep::Signal sigf(f);
+    //    Signal sigf(f);
     //
     //    start = hrc::now();
     //
@@ -101,8 +101,8 @@ TEST(TestSignalAssembly, shouldCreateSignal)
     //==========================
 
 
-    sep::Signal sigz;
-    sigz = sep::Signal(person, &SlotPerson::compare, name);
+    Signal sigz;
+    sigz = Signal(person, &SlotPerson::compare, name);
 
     //==========================
     //          START

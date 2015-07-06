@@ -4,8 +4,8 @@
 
 Emitter::Emitter()
 {
-    this->signals            = (sep::Signal*)calloc(MAX_SIGNALS, sizeof(signals));
-    this->noActionSignal     = new sep::Signal(nothing, &Nothing::noAction);
+    this->signals            = (Signal*)calloc(MAX_SIGNALS, sizeof(signals));
+    this->noActionSignal     = new Signal(nothing, &Nothing::noAction);
     this->nothing            = new Nothing();
     this->connectedDelegates = new std::list<Delegate*>();
 

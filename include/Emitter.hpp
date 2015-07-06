@@ -31,8 +31,8 @@ class Emitter
 {
     friend class Delegate;
 private:
-    sep::Signal*            signals;
-    sep::Signal*            noActionSignal;
+    Signal*                 signals;
+    Signal*                 noActionSignal;
     Nothing*                nothing;
     std::list<Delegate*>*   connectedDelegates;
 
@@ -72,7 +72,7 @@ void Emitter::connect(const int signalName, T&& delegate, F&& delegateFunction,
 
     delegate->addEmitter(this, signalName);
     this->connectedDelegates->push_back(delegate);
-    this->signals[signalName] = sep::Signal(std::forward<T>(delegate),
+    this->signals[signalName] = Signal(std::forward<T>(delegate),
                                             std::forward<F>(delegateFunction),
                                             std::forward<args>(delegateFunctionArguments)...);
 }

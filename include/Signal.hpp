@@ -16,9 +16,6 @@
 
 template<class T> using decayedType = typename std::decay<T>::type;
 
-namespace sep
-{
-
 /**
  * Helper types for parameter unpack.
  */
@@ -388,7 +385,5 @@ public:
         return *this;
     }
 };
-
-}
 
 #endif  // SIGNAL_HPP
