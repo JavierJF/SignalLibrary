@@ -128,9 +128,7 @@ class placeholder
 {
 public:
     virtual ~placeholder() {}
-
     virtual const placeholder* clone() const = 0;
-
     virtual void execute() const = 0;
 };
 
