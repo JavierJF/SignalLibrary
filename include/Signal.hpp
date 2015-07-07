@@ -132,6 +132,17 @@ public:
     virtual void execute() const = 0;
 };
 
+/**
+ * This class represent through its base class the storing of the signal for
+ * its execution.
+ *
+ * Explanation:
+ *     This is a templated class, which means that each specialization is a
+ *     different type, so we cannot store it in the same type, unless this type
+ *     is also templated. That makes impossible to make a truly generic Signal,
+ *     unless you use a type-erasure technique, exposing a common interface,
+ *     for all these specific templated classes.
+ */
 template <typename T, typename F, typename... arguments>
 class derived final : public placeholder {
 private:
