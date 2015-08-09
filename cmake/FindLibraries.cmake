@@ -7,4 +7,4 @@ SET(CMAKE_AUTOMOC ON)
 # Find includes in corresponding build directories
 SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-FIND_PACKAGE(Qt5Widgets REQUIRED)
+FIND_PACKAGE(Qt5Widgets)

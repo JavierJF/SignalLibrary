@@ -1,14 +1,28 @@
 IF(BUILD_TESTS AND GTEST_FOUND)
-   INCLUDE_DIRECTORIES(${GTEST_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/tests/include)
-   INCLUDE_DIRECTORIES(${Qt5Widgets_INCLUDES})
-   FILE(GLOB_RECURSE TEST_SRCS "${PROJECT_SOURCE_DIR}/tests/*.cpp")
-   FILE(GLOB TEST_HEADERS "${PROJECT_SOURCE_DIR}/tests/include/*.hpp")
-   ADD_EXECUTABLE(TESTS ${TEST_SRCS} ${TEST_HEADERS})
-   TARGET_LINK_LIBRARIES(TESTS ${GTEST_BOTH_LIBRARIES} ${PROJECT_NAME})
-   QT5_USE_MODULES(TESTS Widgets)
-   IF(ENABLE_COVERAGE)
-      SETUP_TARGET_FOR_COVERAGE(coverageHtml tests coverage)
-   ENDIF()
+
+   INCLUDE_DIRECTORIES(SYSTEM ${GTEST_INCLUDE_DIRS})
+   INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/tests/include)
+
+   LINK_LIBRARIES(${GTEST_BOTH_LIBRARIES} ${PROJECT_NAME})
+
+   FILE(GLOB unit_srcs  "unit/*.cpp"
+                        "unit/*.h")
+
+   ADD_EXECUTABLE(TestsUnit ${unit_srcs} tests_main.cpp)
+
+   # Build Performance tests
+   if (Qt5Widgets_FOUND)
+           INCLUDE_DIRECTORIES(SYSTEM ${Qt5Widgets_INCLUDES})
+
+           FILE(GLOB performance_srcs    "src/*.cpp"
+                                         "include/*.hpp")
+
+           ADD_EXECUTABLE(TestPerformance ${performance_srcs} performance/PerformanceTests.cpp tests_main.cpp)
+           QT5_USE_MODULES(TestPerformance Widgets)
+   endif()
+
 ELSEIF(NOT GTEST_FOUND)
+
    MESSAGE(WARNING "GTest is not installed")
-ENDIF()
+
+ENDIF()  
