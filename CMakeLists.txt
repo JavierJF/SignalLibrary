@@ -6,7 +6,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0.1)
 INCLUDE(cmake/Options.cmake REQUIRED)
 INCLUDE(cmake/FindLibraries.cmake REQUIRED)
 INCLUDE(cmake/CompilerFlags.cmake REQUIRED)
-INCLUDE(cmake/Tests.cmake REQUIRED)
 
 ADD_SUBDIRECTORY(include)
 ADD_SUBDIRECTORY(src)

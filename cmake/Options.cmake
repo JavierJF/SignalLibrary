@@ -9,7 +9,8 @@ if (NOT CMAKE_BUILD_TYPE)
         set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-option(INSTALL_DOC              "Install documentation in system"                                       OFF)
+option(BUILD_TESTS      "Build unit/performance tests"                                  ON)
+option(INSTALL_DOC      "Install documentation in system"                               OFF)
 
 set(CMAKE_INCLUDE_DIRS_CONFIGCMAKE "${CMAKE_INSTALL_PREFIX}/include")
 set(CMAKE_LIB_DIRS_CONFIGCMAKE     "${CMAKE_INSTALL_PREFIX}/lib")
